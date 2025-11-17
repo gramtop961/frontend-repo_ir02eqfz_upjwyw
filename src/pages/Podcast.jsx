@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
+import { useAudioPlayer } from '../components/AudioPlayerProvider'
 
 export default function Podcast() {
   const [episodes, setEpisodes] = useState([])
   const [syncing, setSyncing] = useState(false)
   const [message, setMessage] = useState('')
+  const { playEpisode } = useAudioPlayer()
 
   const base = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'
 
@@ -65,17 +67,17 @@ export default function Podcast() {
           </div>
         )}
 
-        <div className="mt-8 space-y-6">
+        <div className="mt-8 space-y-3">
           {episodes.map((ep) => (
-            <div key={ep.slug} className="rounded-xl border bg-white p-6 shadow-sm">
-              <h3 className="text-lg font-semibold">{ep.title}</h3>
-              {ep.audio_url ? (
-                <audio controls className="mt-4 w-full">
-                  <source src={ep.audio_url} />
-                </audio>
-              ) : (
-                <div className="mt-4 text-sm text-gray-500">No audio available for this episode.</div>
-              )}
+            <div key={ep.slug} className="rounded-xl border bg-white p-4 shadow-sm flex items-center justify-between gap-4">
+              <h3 className="text-base font-medium truncate">{ep.title}</h3>
+              <button
+                onClick={() => playEpisode(ep)}
+                disabled={!ep.audio_url}
+                className="shrink-0 rounded-full bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700 disabled:opacity-50"
+              >
+                Play
+              </button>
             </div>
           ))}
           {episodes.length === 0 && (
