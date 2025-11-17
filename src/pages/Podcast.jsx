@@ -5,30 +5,71 @@ export default function Podcast() {
   const [q, setQ] = useState('')
   const [guest, setGuest] = useState('')
   const [pillar, setPillar] = useState('')
+  const [syncing, setSyncing] = useState(false)
+  const [message, setMessage] = useState('')
+
+  const base = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'
+
+  const load = async () => {
+    const url = new URL(`${base}/podcasts`)
+    if (q) url.searchParams.set('q', q)
+    if (guest) url.searchParams.set('guest', guest)
+    if (pillar) url.searchParams.set('pillar', pillar)
+    const res = await fetch(url)
+    if (res.ok) {
+      const data = await res.json()
+      setEpisodes(data.items || [])
+    }
+  }
 
   useEffect(() => {
-    const load = async () => {
-      const base = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'
-      const url = new URL(`${base}/podcasts`)
-      if (q) url.searchParams.set('q', q)
-      if (guest) url.searchParams.set('guest', guest)
-      if (pillar) url.searchParams.set('pillar', pillar)
-      const res = await fetch(url)
-      if (res.ok) {
-        const data = await res.json()
-        setEpisodes(data.items || [])
-      }
-    }
     load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, guest, pillar])
+
+  const handleSync = async () => {
+    try {
+      setSyncing(true)
+      setMessage('')
+      const res = await fetch(`${base}/podcasts/import/transistor`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feed_url: 'https://feeds.transistor.fm/creconnection' })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.detail || 'Sync failed')
+      setMessage(`Synced ${data.created} new, ${data.updated} updated from Transistor`)
+      await load()
+    } catch (e) {
+      setMessage(String(e.message || e))
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   const filtered = useMemo(() => episodes, [episodes])
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-6 py-16">
-        <h1 className="text-3xl md:text-4xl font-bold">Podcast</h1>
-        <p className="mt-3 text-gray-600">Search episodes by guest, topic, or pillar.</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold">Podcast</h1>
+            <p className="mt-3 text-gray-600">Search episodes by guest, topic, or pillar.</p>
+          </div>
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="inline-flex items-center rounded-lg bg-emerald-600 px-4 py-2 text-white shadow hover:bg-emerald-700 disabled:opacity-60"
+          >
+            {syncing ? 'Syncing…' : 'Sync from Transistor'}
+          </button>
+        </div>
+        {message && (
+          <div className="mt-4 text-sm text-gray-700 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2">
+            {message}
+          </div>
+        )}
         <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-3">
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search..." className="rounded-md border px-3 py-2" />
           <input value={guest} onChange={e => setGuest(e.target.value)} placeholder="Guest" className="rounded-md border px-3 py-2" />
@@ -42,6 +83,9 @@ export default function Podcast() {
               <div className="mt-3 text-sm text-gray-500">{ep.guest_name}</div>
             </a>
           ))}
+          {filtered.length === 0 && (
+            <div className="text-gray-500">No episodes yet. Try syncing from Transistor.</div>
+          )}
         </div>
       </div>
     </div>
