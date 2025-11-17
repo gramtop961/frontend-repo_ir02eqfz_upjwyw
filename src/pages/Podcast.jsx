@@ -1,32 +1,27 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 
 export default function Podcast() {
   const [episodes, setEpisodes] = useState([])
-  const [q, setQ] = useState('')
-  const [guest, setGuest] = useState('')
-  const [pillar, setPillar] = useState('')
   const [syncing, setSyncing] = useState(false)
   const [message, setMessage] = useState('')
 
   const base = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'
 
   const load = async () => {
-    const url = new URL(`${base}/podcasts`)
-    if (q) url.searchParams.set('q', q)
-    if (guest) url.searchParams.set('guest', guest)
-    if (pillar) url.searchParams.set('pillar', pillar)
-    const res = await fetch(url)
-    if (res.ok) {
+    try {
+      const res = await fetch(`${base}/podcasts`)
+      if (!res.ok) throw new Error('Failed to load episodes')
       const data = await res.json()
       setEpisodes(data.items || [])
+    } catch (e) {
+      setMessage(String(e.message || e))
     }
   }
 
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, guest, pillar])
+  }, [])
 
   const handleSync = async () => {
     try {
@@ -48,22 +43,20 @@ export default function Podcast() {
     }
   }
 
-  const filtered = useMemo(() => episodes, [episodes])
-
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-6 py-16">
+      <div className="max-w-3xl mx-auto px-6 py-16">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold">Podcast</h1>
-            <p className="mt-3 text-gray-600">Search episodes by guest, topic, or pillar.</p>
+            <p className="mt-3 text-gray-600">Browse episodes and play them directly.</p>
           </div>
           <button
             onClick={handleSync}
             disabled={syncing}
             className="inline-flex items-center rounded-lg bg-emerald-600 px-4 py-2 text-white shadow hover:bg-emerald-700 disabled:opacity-60"
           >
-            {syncing ? 'Syncing…' : 'Sync from Transistor'}
+            {syncing ? 'Syncing…' : 'Sync'}
           </button>
         </div>
         {message && (
@@ -71,21 +64,22 @@ export default function Podcast() {
             {message}
           </div>
         )}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-3">
-          <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search..." className="rounded-md border px-3 py-2" />
-          <input value={guest} onChange={e => setGuest(e.target.value)} placeholder="Guest" className="rounded-md border px-3 py-2" />
-          <input value={pillar} onChange={e => setPillar(e.target.value)} placeholder="Pillar" className="rounded-md border px-3 py-2" />
-        </div>
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filtered.map(ep => (
-            <Link key={ep.slug} to={`/podcast/${ep.slug}`} className="rounded-xl border bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
-              <h3 className="text-xl font-semibold">{ep.title}</h3>
-              {ep.summary && <p className="mt-2 text-gray-600">{ep.summary}</p>}
-              <div className="mt-3 text-sm text-gray-500">{ep.guest_name}</div>
-            </Link>
+
+        <div className="mt-8 space-y-6">
+          {episodes.map((ep) => (
+            <div key={ep.slug} className="rounded-xl border bg-white p-6 shadow-sm">
+              <h3 className="text-lg font-semibold">{ep.title}</h3>
+              {ep.audio_url ? (
+                <audio controls className="mt-4 w-full">
+                  <source src={ep.audio_url} />
+                </audio>
+              ) : (
+                <div className="mt-4 text-sm text-gray-500">No audio available for this episode.</div>
+              )}
+            </div>
           ))}
-          {filtered.length === 0 && (
-            <div className="text-gray-500">No episodes yet. Try syncing from Transistor.</div>
+          {episodes.length === 0 && (
+            <div className="text-gray-500">No episodes yet. Try syncing to import from Transistor.</div>
           )}
         </div>
       </div>
