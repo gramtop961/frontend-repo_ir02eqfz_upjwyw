@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 export default function Podcast() {
   const [episodes, setEpisodes] = useState([])
@@ -34,7 +35,7 @@ export default function Podcast() {
       const res = await fetch(`${base}/podcasts/import/transistor`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ feed_url: 'https://feeds.transistor.fm/creconnection' })
+        body: JSON.stringify({ feed_url: 'https://feeds.transistor.fm/the-cre-connection-samy-soussan' })
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.detail || 'Sync failed')
@@ -77,11 +78,11 @@ export default function Podcast() {
         </div>
         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
           {filtered.map(ep => (
-            <a key={ep.slug} href={`/podcast/${ep.slug}`} className="rounded-xl border bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
+            <Link key={ep.slug} to={`/podcast/${ep.slug}`} className="rounded-xl border bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
               <h3 className="text-xl font-semibold">{ep.title}</h3>
-              <p className="mt-2 text-gray-600">{ep.summary}</p>
+              {ep.summary && <p className="mt-2 text-gray-600">{ep.summary}</p>}
               <div className="mt-3 text-sm text-gray-500">{ep.guest_name}</div>
-            </a>
+            </Link>
           ))}
           {filtered.length === 0 && (
             <div className="text-gray-500">No episodes yet. Try syncing from Transistor.</div>
